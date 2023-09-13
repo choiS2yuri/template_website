@@ -2,12 +2,29 @@ import { Route, Routes } from "react-router-dom";
 import GlobalStyle from "./components/GlobalStyle";
 import Main from "./pages/Main";
 import Aside from "./components/Aside";
-import { ThemeProvider } from "styled-components";
+import styled, { ThemeProvider } from "styled-components";
 import { useState } from "react";
 import Nav from "./components/Nav";
- 
+import store from "./store";
+import { Provider, useSelector } from "react-redux";
+import Member from "./pages/Member";
+import Login from "./pages/Login";
+
+console.log(process.env)
+
 function App() {
-  
+  return (
+    <>
+      <Provider store={store}>
+        <Inner />
+      </Provider>
+    </>
+  );
+}
+
+
+
+function Inner(){
   const light = {
     colors : {
       Primary : "lightpink",
@@ -26,24 +43,23 @@ function App() {
       ContentBg: "#272929"
     }
   }
-  const [themeConfig, setThemeConfig] = useState("light");
-  const DarkMode = themeConfig === 'light' ? light : dark;
-  const ThemeSelect = ()=>{
-    setThemeConfig(themeConfig === 'light' ? 'dark' : 'light')
-  }
-  return (
+  const theme = useSelector(state => state.dark)
+  const DarkMode = theme === 'light' ? light : dark;
+  return(
     <>
-    
-      <ThemeProvider theme={DarkMode}>
-        <GlobalStyle />
-        <Nav />
-          <Aside ThemeSelect={ThemeSelect} themeConfig={themeConfig}/>
-            <Routes>
-              <Route path="/" element={<Main/>}></Route>
-            </Routes>
-      </ThemeProvider>
+       <ThemeProvider theme={DarkMode}>
+
+          <GlobalStyle />
+            <Aside />
+            <Nav />
+              <Routes>
+                <Route path="/" element={<Main/>}></Route>
+                <Route path="/member" element={<Member/>}></Route>
+                <Route path="/login" element={<Login />}></Route>
+              </Routes>
+        </ThemeProvider>
     </>
-  );
+  )
 }
 
 export default App;
