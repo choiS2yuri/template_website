@@ -1,11 +1,14 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
 import { firebaseAuth, createUserWithEmailAndPassword } from './../firebase/indes'
-import {doc, setDoc, getFirestore} from 'firebase/firestore'
+import {doc, setDoc, getFirestore, collection, getDoc, updateDoc} from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faEye, faEyeSlash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
-import Modal from '../components/Modal'
+import { faEye, faEyeSlash} from '@fortawesome/free-solid-svg-icons'
+import Modal from './../components/Modal'
+import { useDispatch, useSelector } from 'react-redux'
+import { logIn } from '../store'
+import { useEffect } from 'react'
 
 const Container = styled.div`
   display: flex;
@@ -13,6 +16,9 @@ const Container = styled.div`
   justify-content: center;
   height: calc(100vh - 86px);
   align-items: center;
+  &.on{
+    display: block;
+  }
 `
 const SignUp = styled.div`
   width: 35vw; padding: 20px;
@@ -59,17 +65,49 @@ const Password = styled.div`
 
 
 
-function Member({isModal, setIsModal, errorMessage}) {
+function Member() {
   const [name, setName] = useState("");
   const [email, setEmail] =useState("");
   const [password, setPassword] =useState("");
   const [passwordConfirm, setPasswordConfirm] =useState("");
   const [nickname, setNickname] =useState("");
-  const [phone, setPhone] =useState("");
+  const [phoneNumber, setPhoneNumber] =useState("");
   const [error, setError] =useState("");
   const [eye, setEye] = useState([0,0]);
-  
-  const navigate = useNavigate();
+  const [isModal, setIsModal] = useState(false);
+  const navigate = useNavigate("");
+  const dispatch = useDispatch("");
+  const initialMode = window.location.pathname.includes("member")
+  const [userUid, setUserUid] = useState("");
+    useEffect(()=>{
+      if(!initialMode){
+        firebaseAuth.onAuthStateChanged((user)=>{
+          if(user){
+            setUserUid(user.uid);
+          }
+        })
+      }
+    },[initialMode])
+
+
+    useEffect(()=>{
+      if(!initialMode && userUid){
+        const fetchUserData = async ()=>{
+          const userRef = doc(getFirestore(), "users", userUid);
+          const userSnap = await getDoc(userRef);
+          if(userSnap.exists()){
+            const data = userSnap.data();
+            setName(data.name);
+            setNickname(data.nickname);
+            setPhoneNumber(data.phoneNumber);
+            setEmail(data.email);
+          }
+
+        }
+        fetchUserData();
+      }
+    },[initialMode, userUid])
+
   
   const toggleEye = (index) =>{
     const newEye = [...eye];
@@ -84,7 +122,7 @@ function Member({isModal, setIsModal, errorMessage}) {
     const value = e.target.value;
 
     e.target.value = e.target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/-{1,2}$/g, "");
-    setPhone(value);
+    setPhoneNumber(value);
   }
 
   const errorMsg = (errorCode) =>{
@@ -118,7 +156,7 @@ function Member({isModal, setIsModal, errorMessage}) {
       errorMessage = "이름";
     }else if(nickname.length === 0){
       errorMessage = "닉네임";
-    }else if(!isValidPhone(phone)){
+    }else if(!isValidPhone(phoneNumber)){
       setError("유효한 전화번호를 입력해주세요");
       setIsModal(!isModal)
       return;
@@ -127,11 +165,11 @@ function Member({isModal, setIsModal, errorMessage}) {
       setError("유효한 이메일 주소를 입력해주세요");
       setIsModal(!isModal)
       return;
-    }else if(password.length === 0){
+    }else if(password.length === 0 && initialMode){
       errorMessage = "비밀번호";
-    }else if(passwordConfirm.length === 0){
+    }else if(passwordConfirm.length === 0 && initialMode){
       errorMessage = "비밀번호 확인";
-    }else if(password !== passwordConfirm){
+    }else if(password !== passwordConfirm && initialMode){
       setError("비밀번호가 일치하지 않습니다.");
       setIsModal(!isModal)
       return;
@@ -143,55 +181,83 @@ function Member({isModal, setIsModal, errorMessage}) {
       return;
     }
     try{
-      const {user} = await createUserWithEmailAndPassword
-      (firebaseAuth, email, password)
-
+      
       const userProfile = {
         name,
         nickname,
-        phone
+        phoneNumber,
+        email
       }
+      
+      if(initialMode){
+        const {user} = await createUserWithEmailAndPassword
+        (firebaseAuth, email, password)
+        await setDoc(doc(getFirestore(), "users", user.uid),userProfile)
+        sessionStorage.setItem("users", user.uid)
+        dispatch(logIn(user.uid));
 
-      await setDoc(doc(getFirestore(), "users", user.uid),userProfile)
-      alert("회원가입이 완료되었습니다.")
+        alert("회원가입이 완료되었습니다.")
+      }else{
+        if(userUid){
+          const userRef = doc(getFirestore(), "users", userUid);
+          await updateDoc(userRef, userProfile);
+          alert("정보 수정이 완료 되었습니다.");
+        }else{
+          setError("회원 정보가 없습니다.");
+          setIsModal(!isModal);
+          return;
+        }
+      }
       navigate('/')
     }catch(error){
       setError(errorMsg(error.code));
       setIsModal(!isModal)
-      console.log(error.code);
+      // console.log(error.code);
     }
   }
+
+
+  const userState = useSelector(state => state.user
+    );
+  console.log(userState.loggedIn)
+
+
+
   return (
     <>
     {
-      isModal && <Modal />
+      isModal && 
+      <Modal error={error} isModal={isModal} onClose={()=>{setIsModal(false)}}/>
     }
+    {
+      userState.loggedIn && initialMode ?  <Modal error={"이미 로그인중입니다"} onClose={()=>navigate("/")}/>: 
       <Container>
         <SignUp>
-          <Title>회원가입</Title>
-          <Input value={name} onChange={(e)=>{setName(e.target.value)}} type='text' className='name' placeholder='이름'/>
-          <Input value={nickname} onChange={(e)=>{setNickname(e.target.value)}} type='text' className='nickname' placeholder='닉네임'/>
-          <Input onInput={PhoneNumber} maxLength={13} type='text' className='phone' placeholder='전화번호'/>
-          <Input value={email} onChange={(e)=>{setEmail(e.target.value)}}type='email' className='email' placeholder='이메일'/>
-
-
-          <Password>
-            <Input value={password} onChange={(e)=>{setPassword(e.target.value)}} type={eye[0] ? "text" : "password"} className='password' placeholder='비밀번호'/>
-            <FontAwesomeIcon icon={eye[0] ? faEye : faEyeSlash} onClick={()=>{
-              toggleEye(0)
-            }}/>
-          </Password>
-          <Password>
-            <Input type={eye[1] ? "text" : "password"} onChange={(e)=>{setPasswordConfirm(e.target.value)}} className='confirm_password' placeholder='비밀번호 확인'/>
-            <FontAwesomeIcon icon={eye[1] ? faEye : faEyeSlash} onClick={()=>{
+          <Title>{initialMode  ?  "회원가입" : "정보수정" }</Title>
+          <Input defaultValue={name} onChange={(e)=>{setName(e.target.value)}} type='text' className='name' placeholder='이름'/>
+          <Input defaultValue={nickname} onChange={(e)=>{setNickname(e.target.value)}} type='text' className='nickname' placeholder='닉네임'/>
+          <Input defaultValue={phoneNumber} onInput={PhoneNumber} maxLength={13} type='text' className='phone' placeholder='전화번호'/>
+          <Input defaultValue={email} onChange={(e)=>{setEmail(e.target.value)}}type='email' className='email' placeholder='이메일'/>
+          {
+            initialMode &&
+            <>
+              <Password>
+                <Input value={password} onChange={(e)=>{setPassword(e.target.value)}} type={eye[0] ? "text" : "password"} className='password' placeholder='비밀번호'/>
+                <FontAwesomeIcon icon={eye[0] ? faEye : faEyeSlash} onClick={()=>{toggleEye(0)}}/>
+              </Password>
+              <Password>
+                <Input type={eye[1] ? "text" : "password"} onChange={(e)=>{setPasswordConfirm(e.target.value)}} className='confirm_password' placeholder='비밀번호 확인'/>
+                <FontAwesomeIcon icon={eye[1] ? faEye : faEyeSlash} onClick={()=>{
               toggleEye(1)
             }}/>
           </Password>
-          
+            </>
+          }
 
-          <Button onClick={signUp}>가입</Button>
+          <Button onClick={signUp}>{initialMode ? "가입" : "수정"}</Button>
         </SignUp>
       </Container>
+    }
     </>
   )
 }

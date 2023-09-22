@@ -1,4 +1,4 @@
-import { faArrowUpFromBracket, faLock, faUser, faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { faArrowUpFromBracket, faLock, faUser, faChevronDown, faUserPen } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
@@ -147,7 +147,7 @@ const MsubmenuMember = styled(NavMember)`
 `
 
 
-function Nav() {
+function Nav({userState}) {
     const [isHeight, setIsHeight] = useState();
     const SubMenuHeight = (e)=>{
 
@@ -300,15 +300,24 @@ function Nav() {
                 <NavMember>
                     <ul>
                         <li>
-                            <NavLink to="/login">
-                                <FontAwesomeIcon icon={faLock} /> 로그인
+                            <NavLink to={userState.data?.nickname ? "/logout" : "/login"}>
+                                <FontAwesomeIcon icon={faLock} /> {userState.data?.nickname ? "로그아웃" : "로그인"}
                             </NavLink>
                         </li>
-                        <li>
-                            <NavLink to="/member">
-                                <FontAwesomeIcon icon={faUser} /> 회원가입
-                            </NavLink>
-                        </li>
+                        {
+                            userState.data?.nickname ? 
+                            <li>
+                                <NavLink to="/modify">
+                                    <FontAwesomeIcon icon={faUserPen} /> 정보수정
+                                </NavLink>
+                            </li>
+                            :
+                            <li>
+                                <NavLink to="/member">
+                                    <FontAwesomeIcon icon={faUser} /> 회원가입
+                                </NavLink>
+                            </li>
+                        } 
                     </ul>
                 </NavMember>
             </NavWrap>
@@ -330,15 +339,24 @@ function Nav() {
             <MsubmenuMember>
                 <ul>
                     <li>
-                        <NavLink to="/login">
-                            <FontAwesomeIcon icon={faLock} /> 로그인
+                        <NavLink to={userState.data?.nickname ? "/logout" : "/login"}>
+                            <FontAwesomeIcon icon={faLock} />{userState.data?.nickname ? "로그아웃" : "로그인"}
                         </NavLink>
                     </li>
-                    <li>
-                        <NavLink to="/member">
-                            <FontAwesomeIcon icon={faUser} /> 회원가입
-                        </NavLink>
-                    </li>
+                    {
+                    userState.data?.nickname ? 
+                        <li>
+                            <NavLink to="/modify">
+                                <FontAwesomeIcon icon={faUserPen} /> 정보수정
+                            </NavLink>
+                        </li>
+                        :
+                        <li>
+                            <NavLink to="/member">
+                                <FontAwesomeIcon icon={faUser} /> 회원가입
+                            </NavLink>
+                        </li>
+                    } 
                 </ul>
             </MsubmenuMember>
             <ul>

@@ -1,7 +1,8 @@
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
 import styled from 'styled-components'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTriangleExclamation } from '@fortawesome/'
+
 
 
 const Button = styled.button`
@@ -38,7 +39,7 @@ const ModalContent = styled.div`
     font-size: 16px; font-weight: bold; margin: 24px 0;
   }
 `
-function Modal({isModal, setIsModal, error}) {
+function Modal({ error, onClose }) {
   
   return (
     <>
@@ -48,7 +49,7 @@ function Modal({isModal, setIsModal, error}) {
             <ModalContent >
                 <FontAwesomeIcon icon={faTriangleExclamation} />
                 <p>{error}</p>
-                <Button onClick={()=>{setIsModal(!isModal)}}>확인</Button>
+                <Button onClick={onClose}>확인</Button>
             </ModalContent>
             </ModalBackground>  
             

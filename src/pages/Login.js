@@ -1,7 +1,10 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
 import { firebaseAuth, signInWithEmailAndPassword } from './../firebase/indes'
-import {useHistory, useNavigate} from 'react-router-dom';
+import {NavLink, useHistory, useNavigate} from 'react-router-dom';
+import { collection, doc, getDoc, getFirestore } from 'firebase/firestore';
+import { useDispatch } from 'react-redux';
+import { logIn, loggedIn } from '../store';
 
 
 const Container = styled.div`
@@ -44,6 +47,20 @@ const Input = styled.input`
 const InputWrapper= styled.div`
   position: relative;
   margin-bottom: 20px;
+  &:last-child{
+    margin-bottom: 0; margin-top: 20px;
+    justify-content: flex-end;
+    display: flex; column-gap: 20px;
+    a{
+      background-color: #24D181;
+      font-size: 14px; text-align: center;
+      padding: 5px 20px; border-radius: 5px;
+      color: #fff;
+      &:last-child{
+        background-color: #036;
+      }
+    }
+  }
   input:focus + label,
   input:not(:placeholder-shown) + label{
     /* input에 값이 있다면 밑에 스타일 고정 */
@@ -52,6 +69,7 @@ const InputWrapper= styled.div`
     font-size: 8px;
     color: #007bff;
   }
+
 `
 const Label= styled.label`
   position: absolute;
@@ -66,7 +84,7 @@ const Button = styled.button`
   width: 100%;
   padding: 10px;
   border-radius: 5px;
-  background-color: #007bff;
+  background-color: #24D181;
   border: none;
   color: #fff; cursor: pointer;
 `
@@ -80,6 +98,7 @@ function Login() {
   // const history = useHistory();
 
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const errorMsg = (errorCode) =>{
     const firebaseError = {
@@ -100,8 +119,19 @@ function Login() {
       // console.log(userLogin)
       const user = userLogin.user;
       alert("로그인되었습니다.")
-      navigate('/')
+      // navigate('/')
       // console.log(user)
+      sessionStorage.setItem("users", user.uid)
+      dispatch(logIn(user.uid));
+      
+      const userDoc = doc(collection(getFirestore(), "users"), user.uid);
+
+      const userDocSnapshot = await getDoc(userDoc);
+      if(userDocSnapshot.exists()){
+        const userData = userDocSnapshot.data();
+        dispatch(loggedIn(userData));
+        navigate("/")
+      }
     }catch(error){
       // 만약 오류가 있다면 이것을 실행해 주세요
       setError(errorMsg(error.code));
@@ -115,7 +145,6 @@ function Login() {
  
   return (
     <>
-
       <Container>
         <SignUp>
           <Title>로그인</Title>
@@ -132,7 +161,10 @@ function Login() {
             </InputWrapper>
             <Button>로그인</Button>
           </form>
-          <p>{error}</p>
+          <InputWrapper>
+              <NavLink to="/findemail">이메일/ 비밀번호 재설정</NavLink>
+              <NavLink to="/member">회원가입</NavLink>
+          </InputWrapper>
         </SignUp>
       </Container>  
     </>
