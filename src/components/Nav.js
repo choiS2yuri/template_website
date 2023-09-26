@@ -301,7 +301,7 @@ function Nav({userState}) {
                     <ul>
                         <li>
                             <NavLink to={userState.data?.nickname ? "/logout" : "/login"}>
-                                <FontAwesomeIcon icon={faLock} /> {userState.data?.nickname ? "로그아웃" : "로그인"}
+                                <FontAwesomeIcon icon={faLock} /> {userState.uid ? "로그아웃" : "로그인"}
                             </NavLink>
                         </li>
                         {
@@ -340,7 +340,7 @@ function Nav({userState}) {
                 <ul>
                     <li>
                         <NavLink to={userState.data?.nickname ? "/logout" : "/login"}>
-                            <FontAwesomeIcon icon={faLock} />{userState.data?.nickname ? "로그아웃" : "로그인"}
+                            <FontAwesomeIcon icon={faLock} />{userState.uid ? "로그아웃" : "로그인"}
                         </NavLink>
                     </li>
                     {

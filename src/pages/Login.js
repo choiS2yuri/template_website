@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
-import { firebaseAuth, signInWithEmailAndPassword } from './../firebase/indes'
+import {signInWithPopup, GoogleAuthProvider, GithubAuthProvider, firebaseAuth, signInWithEmailAndPassword } from './../firebase/indes'
 import {NavLink, useHistory, useNavigate} from 'react-router-dom';
 import { collection, doc, getDoc, getFirestore } from 'firebase/firestore';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { logIn, loggedIn } from '../store';
-
+import { faGithub, faGoogle } from '@fortawesome/free-brands-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const Container = styled.div`
   display: flex;
@@ -14,6 +15,7 @@ const Container = styled.div`
   height: calc(100vh - 86px);
   align-items: center;
 `
+
 const SignUp = styled.div`
   width: 35vw; padding: 20px;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -88,6 +90,21 @@ const Button = styled.button`
   border: none;
   color: #fff; cursor: pointer;
 `
+const SnsButton = styled.button`
+  display: flex;
+  align-items: center; padding: 8px 12px;
+  border : none; border-radius: 4px; cursor: pointer;
+  background-color: ${props => props.$bgColor || 'gray'};
+  color: ${props => props.$color || 'white'};
+  font-size: 16px; width: 50%;
+  transition: 0.3s;
+  &:hover{
+    background-color: ${props => props.$hoverBgColor || '#666'};
+  }
+  svg{
+    margin-right: 8px;
+  }
+`
 
 function Login() {
 
@@ -96,10 +113,9 @@ function Login() {
   const [password, setPassword] = useState();
   const [error, setError] = useState();
   // const history = useHistory();
-
+  const userState = useSelector(state => state.user);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
   const errorMsg = (errorCode) =>{
     const firebaseError = {
         'auth/user-not-found' : "사용자를 찾을 수 없습니다.",
@@ -109,7 +125,7 @@ function Login() {
     }
     return firebaseError[errorCode] || '알 수 없는 에러가 발생했습니다.'
   }
-
+  console.log(userState)
   const LoginForm = async (e) =>{
     e.preventDefault();
     try{
@@ -142,8 +158,46 @@ function Login() {
   // navigate(-1)
   // console.log(history)
 
- 
-  return (
+   const snsLogin = async (data)=>{
+      let provider;
+
+    switch(data){
+      case 'google':
+        provider = new GoogleAuthProvider();
+
+      break;
+      case 'github':
+        provider = new GithubAuthProvider();
+
+      break;
+
+      default:
+        return;
+    }
+
+    try{
+      const result = await signInWithPopup(firebaseAuth, provider)
+      const user = result.user;
+      console.log(user)
+      sessionStorage.setItem("users", user.uid);
+      dispatch(logIn(user.uid));
+      navigate("/member", {
+        state : 
+        {
+          nickname : user.displayName,
+          email : user.email,
+          photoURL : user.photoURL
+        }
+      })
+
+
+    }catch(error){
+      setError(errorMsg(error))
+      console.log(error)
+    }
+   }
+
+return (
     <>
       <Container>
         <SignUp>
@@ -164,6 +218,14 @@ function Login() {
           <InputWrapper>
               <NavLink to="/findemail">이메일/ 비밀번호 재설정</NavLink>
               <NavLink to="/member">회원가입</NavLink>
+          </InputWrapper>
+          <InputWrapper>
+              <SnsButton onClick={()=>{snsLogin('google')}} $bgColor='#db4437' $hoverBgColor='#b33225'>
+                <FontAwesomeIcon icon={faGoogle} /> Login With Google
+              </SnsButton>
+              <SnsButton onClick={()=>{snsLogin('github')}} $bgColor='#333' $hoverBgColor='111'>
+                <FontAwesomeIcon icon={faGithub} /> Login With Github
+              </SnsButton>
           </InputWrapper>
         </SignUp>
       </Container>  
