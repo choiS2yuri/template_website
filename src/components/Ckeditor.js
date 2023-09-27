@@ -9,7 +9,7 @@ import { faList, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Modal from './Modal';
 import { useEffect } from 'react';
-
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const ButtonWrap = styled.div`
     display: flex;
@@ -43,7 +43,9 @@ function Ckeditor({title, postData}) {
     const {board,view} = useParams();
     const [writeData, setWriteData] = useState("");
     const [message,  setMessage] = useState("");
-    
+    const [editorInstance, setEditorInstance] = useState(null);
+    const [fileUrl, setFileUrl] = useState("");
+
     useEffect(()=>{
         if(postData){
             setWriteData(postData.content);
@@ -71,22 +73,64 @@ function Ckeditor({title, postData}) {
                 })
                 alert("게시글이 성공적으로 수정되었습니다.")
             }else{
-                await addDoc(collection(getFirestore(), board),{
-                     title : title,
-                     content : writeData,
-                     view : 1,
-                     uid: memberProfile.uid,
-                     name : memberProfile.data.name,
-                     email: memberProfile.data.email,
-                     nickname: memberProfile.data.nickname,
-                     timestamp : serverTimestamp()
-                })
-                alert("게시글이 성공적으로 등록 되었습니다.");
+                const fileInput = document.querySelector("#file").files[0];
+                console.log(fileInput)
+                if(fileInput){
+                    uploadToFirebase(fileInput)
+                }
+                // await addDoc(collection(getFirestore(), board),{
+                //      title : title,
+                //      content : writeData,
+                //      view : 1,
+                //      uid: memberProfile.uid,
+                //      name : memberProfile.data.name,
+                //      email: memberProfile.data.email,
+                //      nickname: memberProfile.data.nickname,
+                //      file : fileUrl,
+                //      timestamp : serverTimestamp()
+                // })
+                // alert("게시글이 성공적으로 등록 되었습니다.");
             }
-           navigate(`/service/${board}`)
+        //    navigate(`/service/${board}`)
         }catch(error){
            setIsModal(true);
            setMessage(error);
+        }
+     }
+
+
+     const uploadToFirebase = async (file) =>{
+        const storageRef = ref(getStorage(), 'images/' + file.name);
+        const upload = uploadBytesResumable(storageRef, file);
+        
+        return new Promise((resolve, reject)=>{
+            upload.on('state_changed',
+            (snapshot) =>{
+
+            },
+            (error) =>{
+                reject(error)
+            },
+                ()=>{
+                    getDownloadURL(upload.snapshot.ref).then((result)=>{
+                        resolve(result)
+                        setFileUrl(result)
+                    })
+                }
+            )
+        })
+     }
+
+     function UploadAdapter (editor){
+        editor.plugins.get("FileRepository").createUploadAdapter = 
+        (loader) =>{
+            return{
+                upload: async ()=>{
+                    const file = await loader.file;
+                    const downURL = await uploadToFirebase(file);
+                    return {default : downURL}
+                }
+            }
         }
      }
   return (
@@ -95,8 +139,12 @@ function Ckeditor({title, postData}) {
     <CKEditor 
         editor={ClassicEditor} 
         data={writeData}
-        config={{ placeholder: "내용을 입력하세요.",}}
+        config={{ 
+            placeholder: "내용을 입력하세요.",
+            extraPlugins : [UploadAdapter]
+        }}
         onReady={ editor => {
+            setEditorInstance(editor);
         // You can store the "editor" and use when it is needed.
         console.log( 'Editor is ready to use!', editor );}}
         onChange={ ( event, editor ) => {
@@ -108,6 +156,7 @@ function Ckeditor({title, postData}) {
         onFocus={ ( event, editor ) => {
             console.log( 'Focus.', editor );} }
                 />
+    <input type='file' id='file'/>
     <ButtonWrap>
         <Button><Link to="/service  notice"><FontAwesomeIcon icon={faList}/>목록</Link></Button>
         <Button onClick={dataSubmit}><FontAwesomeIcon icon={faPen} />완료</Button>
